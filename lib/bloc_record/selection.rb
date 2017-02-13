@@ -108,9 +108,23 @@ module Selection
 
 	def order(*args)
 		if args.count > 1
-			order = args.join(",")
+		  order = []
+		  args.map! { |x| 
+		    if x.class == Hash
+		      x.map { |k,v| 
+		        x = "#{k} #{v}"
+		      }
+		    end
+		    order << x
+		  }
+		  order = orders.join(', ')		  
 		else
-			order = args.first.to_s
+		  if args[0].class == Hash
+  		  order_hash = convert_keys(args[0])
+  		  order = order_hash.map { |key, value| "#{key} #{sql_strings(value)}"}.join(", ")
+		  else
+		    order = args.first.join(", ")
+		  end
 		end
 
 		rows = connection.execute <<-SQL
@@ -126,17 +140,27 @@ module Selection
 			rows = connection.execute <<-SQL
 				SELECT * FROM #{table} #{joins}
 			SQL
-			case args.first
-				when String
-					rows = connection.execute <<-SQL 
-						SELECT * FROM #{table} #{BlocRecord::Utility.sql_strings(args.first)};
-					SQL
-				when Symbol
-					rows = connection.execute <<-SQL
-						SELECT * FROM #{table}
-						INNER JOIN #{args.first} ON #{args.first}.#{table}_id = #{table}.id
-					SQL
-			end
+		else
+			case arg.first
+		      when String
+		        rows = connection.execute <<-SQL
+		          SELECT * FROM #{table} #{BlocRecord::Utility.sql_strings(arg)};
+		        SQL
+		      when Symbol
+		        rows = connection.execute <<-SQL
+		          SELECT * FROM #{table}
+		          INNER JOIN #{arg} ON #{arg}.#{table}_id = #{table}.id
+		        SQL
+		      when Hash
+		        expression_hash = BlocRecord::Utility.convert_keys(args.first)
+		        expression = expression_hash.map { |key, value| "#{key}=#{BlocRecord::Utility.sql_strings(value)}"}.join(",")
+		        rows = connection.execute <<-SQL
+		          SELECT * FROM #{table}
+		          INNER JOIN #{expression[0]} ON #{expression[0]}.#{table}_id = #{table}.id
+		          INNER JOIN #{expression[1]} ON #{expression[1]}.#{expression[0]}_id = #{table}.id
+		        SQL
+		      end
+		    end
 		end
 		rows_to_array(rows)
 	end
