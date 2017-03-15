@@ -9,19 +9,21 @@ module Persistence
 
 	module ClassMethods
 		def create(attrs)
-			attrs = BlocRecord::Utility.convert_keys(attrs)
-			attrs.delete "id"
-			vals = attributes.map {|key| BlocRecord::Utility.sql_strings(attrs[key])}
+	      attrs = BlocRecord::Utility.convert_keys(attrs)
+	      attrs.delete("id")
 
-			connection.execute <<-SQL 
-				INSERT INTO #{table} (#{attributes.join ","})
-				VALUES (#{vals.join ","})
-			SQL
+	      vals = attributes.map {|key| BlocRecord::Utility.sql_strings(attrs[key])}
+	      sql = <<-SQL
+	        INSERT INTO #{table} (#{attributes.join(",")})
+	        VALUES (#{vals.join(",")});
+	        SQL
+	      connection.execute sql
 
-			data = Hash[attributes.zip attrs.values]
-			data["id"] = connection.execute("SELECT last_insert_rowid();")[0][0]
-			new(data)
-		end
+	      data = Hash[attributes.zip attrs.values]
+	      data["id"] = connection.execute("SELECT last_insert_rowid();")[0][0]
+	      new(data)
+	    end
+
 
 		def save!
 			unless self.id
@@ -46,9 +48,16 @@ module Persistence
 		end
 
 		def update(ids, updates)
-			updates = BlocRecord::Utility.convert_keys(updates)
-			update.delete "id"
-			updates_array = updates.map { |k, v| "#{k}=#{BlocRecord::Utility.sql_strings(v)}" }
+			puts ids
+			puts updates
+			if updates.class == Hash
+				updates = BlocRecord::Utility.convert_keys(updates)
+				updates.delete "id"
+				updates_array = updates.map { |k, v| "#{k}=#{BlocRecord::Utility.sql_strings(v)}" }
+			elsif updates.class == Array
+				updates_array = updates 
+			end
+
 
 			if ids.class == Fixnum
 				where_clause = "WHERE id = #{ids};"
@@ -66,16 +75,24 @@ module Persistence
 			true
 		end
 
-		def update_attribute(attribute, value)
-			self.class.update(self.id, { attribute => value })
-		end
-
-		def update_attributes(updates)
-			self.class.update(self.id, updates)
-		end
-
 		def update_all(updates)
 			update(nil, updates)
 		end
+
+		def self.method_missing(method_sym, *arguments, &block)
+			if method_sym.to_s =~ /^update_(.*)$/
+				update_attribute($1.to_sym => arguments.first)
+			else
+				super
+			end
+		end
+	end
+
+	def update_attribute(attribute, value)
+		self.class.update(self.id, { attribute => value })
+	end
+
+	def update_attributes(updates)
+		self.class.update(self.id, updates)
 	end
 end
