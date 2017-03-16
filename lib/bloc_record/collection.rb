@@ -20,15 +20,15 @@ module BlocRecord
 		end
 
 		def where(args)
-	      filtered_where = []
-	      self.each do |entry|
-	        args.each_key do |key|
-	          if entry[key] == args[key]
-	          	filtered_where << entry
-	          end
-	        end
-	      end
-	      filtered_where
+	      	filtered_where = []
+	      	self.each do |entry|
+		        args.each_key do |key|
+		        	if entry[key] == args[key]
+						filtered_where << entry
+					end
+		        end
+			end
+			filtered_where
 	    end
 	end
 end
