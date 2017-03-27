@@ -87,6 +87,13 @@ module Selection
 		if args.count > 1
 			expression = args.shift
 			params = args
+
+			sql = <<-SQL
+				SELECT #{columns.join ","} FROM #{table}
+				WHERE #{expression};
+			SQL
+
+			rows = connection.execute(sql, params)
 		else
 			case args.first
 			when String 
@@ -95,14 +102,16 @@ module Selection
 				expression_hash = BlocRecord::Utility.convert_keys(args.first)
 				expression = expression_hash.map {|key, value| "#{key}=#{BlocRecord::Utility.sql_strings(value)}"}.join(" and ")
 			end
+
+			sql = <<-SQL
+				SELECT #{columns.join ","} FROM #{table}
+				WHERE #{expression};
+			SQL
+
+			rows = connection.execute(sql)
 		end
 
-		sql = <<-SQL
-			SELECT #{columns.join ","} FROM #{table}
-			WHERE #{expression};
-		SQL
-
-		rows = connection.execute(sql, params)
+		
 		rows_to_array(rows)
 	end
 
