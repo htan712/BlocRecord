@@ -18,5 +18,16 @@ module BlocRecord
 			SQL
 		end
 
+		def take(num=1)
+			taken_records = []
+			if num > 1
+				for i in (0..num) do
+				  taken_records << self[i]
+				end
+			else
+				return self.first
+			end
+			taken_records
+		end
 	end
 end
